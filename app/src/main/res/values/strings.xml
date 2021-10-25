@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">Stop Motion App</string>
     <string name="header">Stop Motion App</string>
+    <string name="createVideo">Create\nVideo</string>
+    <string name="photoButton">Take\nPhoto</string>
+    <string name="resetButton">Reset</string>
 </resources>
