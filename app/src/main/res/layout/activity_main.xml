@@ -6,57 +6,61 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+
     <Button
         android:id="@+id/createVideoButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/createVideo"
+        android:onClick="createVideo"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.959"
+        app:layout_constraintHorizontal_bias="0.946"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.174" />
+        app:layout_constraintVertical_bias="0.081" />
 
     <Button
         android:id="@+id/takePhotoButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="59dp"
+        android:onClick="takePhoto"
         android:text="@string/photoButton"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.947"
+        app:layout_constraintHorizontal_bias="0.934"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/createVideoButton"
-        app:layout_constraintVertical_bias="0.248" />
+        app:layout_constraintVertical_bias="0.0" />
 
     <Button
         android:id="@+id/resetButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="292dp"
         android:layout_marginEnd="34dp"
         android:layout_marginBottom="71dp"
         android:text="@string/resetButton"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintHorizontal_bias="0.986"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="1.0" />
-
+        app:layout_constraintTop_toBottomOf="@+id/takePhotoButton"
+        app:layout_constraintVertical_bias="0.206" />
 
     <androidx.camera.view.PreviewView
         android:id="@+id/previewView"
-        android:layout_width="482dp"
-        android:layout_height="286dp"
+        android:layout_width="480dp"
+        android:layout_height="270dp"
         android:layout_marginTop="29dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/createVideoButton"
         app:layout_constraintHorizontal_bias="0.535"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.0" />
+        app:layout_constraintVertical_bias="0.0">
+
+    </androidx.camera.view.PreviewView>
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>
