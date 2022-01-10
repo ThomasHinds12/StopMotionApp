@@ -9,14 +9,10 @@ import androidx.appcompat.app.AppCompatActivity;
 import java.util.ArrayList;
 
 public class VideoActivity extends AppCompatActivity {
-    ArrayList<Image> images;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_video);
-        Intent intent = getIntent();
-
-
     }
 }

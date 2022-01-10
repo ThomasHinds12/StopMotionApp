@@ -104,4 +104,9 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+
+    public void createVideo(){
+        Intent intent = new Intent(this, VideoActivity.class);
+        startActivity(intent);
+    }
 }
