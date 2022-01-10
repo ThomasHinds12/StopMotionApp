@@ -94,22 +94,14 @@ public class MainActivity extends AppCompatActivity {
             @androidx.camera.core.ExperimentalGetImage
             public void onCaptureSuccess(@NonNull ImageProxy image) {
                 super.onCaptureSuccess(image);
-                Log.d("PhotoTaken", image.toString());
-
+                Log.d("PhotoTaken", String.valueOf(image.getFormat()));
+                //adds photo to the list of images as a JPEG
                 if (image.getImage() != null){
                     images.add(image.getImage());
                 }
                 Log.d("ImageListSize", String.valueOf(images.size()));
-                Log.d("Image[0]", images.get(0).toString());
                 image.close();
             }
         });
-    }
-
-
-    public void createVideo(View view){
-        Intent intent = new Intent(this, VideoActivity.class);
-        intent.putExtra("images", images);
-        startActivity(intent);
     }
 }
