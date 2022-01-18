@@ -111,7 +111,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void encodeVideo(){
-        VideoEncoder videoEncoder = new VideoEncoder();
-        videoEncoder.setUp(3840, 2160, 5);
+        VideoEncoder videoEncoder = new VideoEncoder(3840, 2160, 5);
+        videoEncoder.setUp();
     };
 }

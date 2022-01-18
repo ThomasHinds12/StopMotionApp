@@ -14,14 +14,19 @@ import java.io.IOException;
 public class VideoEncoder {
 
     private MediaCodec encoder;
-
+    int width;
+    int height;
+    int framerate;
 
     //constructor creates and configures the MediaCodec encoder
-    VideoEncoder() {
+    VideoEncoder(int width, int height, int framerate) {
+        this.width = width;
+        this.height = height;
+        this.framerate = framerate;
 
     }
 
-    public void setUp(int width, int height, int framerate){
+    public void setUp(){
         try{
             encoder = MediaCodec.createEncoderByType("video/avc");
             Log.d("EncoderCreated", "Video Encoder created successfully");
