@@ -94,7 +94,7 @@ public class MainActivity extends AppCompatActivity {
             @androidx.camera.core.ExperimentalGetImage
             public void onCaptureSuccess(@NonNull ImageProxy image) {
                 super.onCaptureSuccess(image);
-                Log.d("PhotoTaken", String.valueOf(image.getFormat()));
+                Log.d("PhotoTaken", String.valueOf(image.getFormat()) + ", height:" + String.valueOf(image.getHeight()) + ", width:" + String.valueOf(image.getWidth()));
                 //adds photo to the list of images as a JPEG
                 if (image.getImage() != null){
                     images.add(image.getImage());
@@ -105,7 +105,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    public void createVideo(){
+    public void createVideo(View view){
         Intent intent = new Intent(this, VideoActivity.class);
         startActivity(intent);
     }
