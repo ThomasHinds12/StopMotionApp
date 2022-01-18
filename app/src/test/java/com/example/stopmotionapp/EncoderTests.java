@@ -8,6 +8,6 @@ import android.provider.MediaStore;
 public class EncoderTests {
     @Test
     public void encoderConfigured(){
-        VideoEncoder encoder = new VideoEncoder(4000, 3000, 5);
+        VideoEncoder encoder = new VideoEncoder();
     }
 }

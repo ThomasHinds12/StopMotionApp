@@ -14,12 +14,14 @@ import java.io.IOException;
 public class VideoEncoder {
 
     private MediaCodec encoder;
-    int width;
-    int height;
-    int framerate;
+
 
     //constructor creates and configures the MediaCodec encoder
-    VideoEncoder(int width, int height, int framerate) {
+    VideoEncoder() {
+
+    }
+
+    public void setUp(int width, int height, int framerate){
         try{
             encoder = MediaCodec.createEncoderByType("video/avc");
             Log.d("EncoderCreated", "Video Encoder created successfully");
@@ -27,12 +29,8 @@ public class VideoEncoder {
             Log.e("MediaCodecCreateEncoderFail", e.getMessage());
         }
 
-        this.width = width;
-        this.height = height;
-        this.framerate = framerate;
-
         MediaFormat mediaFormat = MediaFormat.createVideoFormat("video/avc", width, height);
-        mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible);
+        mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
         mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, width*height*5);
         mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, framerate);
         mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
@@ -44,7 +42,6 @@ public class VideoEncoder {
         catch (MediaCodec.CodecException e){
             Log.e("MediaCodecConfigFail", e.getDiagnosticInfo());
         }
-
     }
 }
 

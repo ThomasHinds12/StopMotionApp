@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.Image;
 import android.os.Bundle;
-import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 
@@ -106,7 +105,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void createVideo(View view){
+        encodeVideo();
         Intent intent = new Intent(this, VideoActivity.class);
         startActivity(intent);
     }
+
+    private void encodeVideo(){
+        VideoEncoder videoEncoder = new VideoEncoder();
+        videoEncoder.setUp(3840, 2160, 5);
+    };
 }
