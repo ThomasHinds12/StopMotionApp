@@ -1,5 +1,6 @@
 /*Used sources https://www.sisik.eu/blog/android/media/images-to-video,
- https://developpaper.com/android-uses-mediacodec-to-encode-the-video-captured-by-the-camera-as-h264/
+ https://developpaper.com/android-uses-mediacodec-to-encode-the-video-captured-by-the-camera-as-h264/,
+ https://bigflake.com/mediacodec/EncodeAndMuxTest.java.txt
  and https://developer.android.com/reference/android/media/MediaCodec as references for this page */
 
 package com.example.stopmotionapp;
@@ -42,10 +43,20 @@ public class VideoEncoder {
 
         try{
             encoder.configure(mediaFormat,null,null, MediaCodec.CONFIGURE_FLAG_ENCODE);
-            Log.d("EncoderConfigured", "MediaCodec successfully configured");
+            encoder.start();
+            Log.d("EncoderStarted", "MediaCodec successfully configured and started");
         }
         catch (MediaCodec.CodecException e){
             Log.e("MediaCodecConfigFail", e.getDiagnosticInfo());
+        }
+    }
+
+    public void releaseEncoder(){
+        if (encoder != null){
+            encoder.stop();
+            encoder.release();
+            encoder = null;
+            Log.d("EncoderStopped", "Encoder stopped and released");
         }
     }
 }
