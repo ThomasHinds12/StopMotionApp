@@ -104,8 +104,8 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    public void createVideo(View view){
-        encodeVideo();
+    /*public void createVideo(View view){
+        //encodeVideo();
         Intent intent = new Intent(this, VideoActivity.class);
         startActivity(intent);
     }
@@ -114,5 +114,5 @@ public class MainActivity extends AppCompatActivity {
         VideoEncoder videoEncoder = new VideoEncoder(3840, 2160, 5);
         videoEncoder.setUp();
         videoEncoder.releaseEncoder();
-    };
+    };*/
 }
