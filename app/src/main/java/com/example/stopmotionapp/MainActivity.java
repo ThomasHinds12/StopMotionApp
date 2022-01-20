@@ -4,13 +4,18 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.Image;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.Log;
 import android.view.View;
+import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.Camera;
 import androidx.camera.core.CameraSelector;
@@ -24,21 +29,28 @@ import androidx.core.content.ContextCompat;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
+import java.io.File;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 
 public class MainActivity extends AppCompatActivity {
     private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
     ImageCapture imageCapture;
     Preview preview;
-    ArrayList<Image> images;
+    int imageCount;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        images = new ArrayList<>();
+        imageCount = 0;
 
         ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {});
         setUpCamera(requestPermissionLauncher);
@@ -80,26 +92,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    //following code based on code from https://developer.android.com/training/camerax/take-photo
+    //following code based on code from https://developer.android.com/training/camerax/take-photo and https://developer.android.com/codelabs/camerax-getting-started#4
     //method to take photo when the 'Take Photo' button is clicked
+    @RequiresApi(api = Build.VERSION_CODES.R)
     public void takePhoto(View view){
-        //ImageCapture.OutputFileOptions outputFileOptions = new ImageCapture.OutputFileOptions.Builder(new File(imageCount + ".jpg")).build();
-        imageCapture.takePicture(ContextCompat.getMainExecutor(this), new ImageCapture.OnImageCapturedCallback() {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss", Locale.UK);
+        File photoFile = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES), dateFormat.format(new Date()) + ".jpg");
+        ImageCapture.OutputFileOptions outputFileOptions = new ImageCapture.OutputFileOptions.Builder(photoFile).build();
+
+        imageCapture.takePicture(outputFileOptions, ContextCompat.getMainExecutor(this), new ImageCapture.OnImageSavedCallback() {
             public void onError(ImageCaptureException e){
                 Log.e("TakePhotoFail", "The photo did not save due to " + e.toString());
             }
 
-            @Override
-            @androidx.camera.core.ExperimentalGetImage
-            public void onCaptureSuccess(@NonNull ImageProxy image) {
-                super.onCaptureSuccess(image);
-                Log.d("PhotoTaken", String.valueOf(image.getFormat()) + ", height:" + String.valueOf(image.getHeight()) + ", width:" + String.valueOf(image.getWidth()));
-                //adds photo to the list of images as a JPEG
-                if (image.getImage() != null){
-                    images.add(image.getImage());
-                }
-                Log.d("ImageListSize", String.valueOf(images.size()));
-                image.close();
+            public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults){
+                Uri savedUri = Uri.fromFile(photoFile);
+                String msg = "Photo capture succeeded:" + savedUri;
+                Toast.makeText(getBaseContext(), msg, Toast.LENGTH_SHORT).show();
+                Log.d("ImageSaved", msg);
             }
         });
     }
