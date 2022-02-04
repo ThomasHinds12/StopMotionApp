@@ -1,9 +1,7 @@
 package com.example.stopmotionapp;
 
 import android.Manifest;
-import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.media.Image;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -23,7 +21,6 @@ import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCaptureException;
-import androidx.camera.core.ImageProxy;
 import androidx.camera.core.Preview;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
@@ -33,13 +30,9 @@ import com.google.common.util.concurrent.ListenableFuture;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.Locale;
-import java.util.Objects;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
 
 public class MainActivity extends AppCompatActivity {
     private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
@@ -67,7 +60,7 @@ public class MainActivity extends AppCompatActivity {
             cameraProviderFuture.addListener(() -> {
                 try {
                     ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
-                    bindPreviewAndImageCapture(cameraProvider);
+                    startPreviewCaptureAndAnalysis(cameraProvider);
                 } catch (ExecutionException | InterruptedException e) {
                     //this should never be reached
                 }
@@ -80,7 +73,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     //sources: https://developer.android.com/training/camerax/preview#java, https://developer.android.com/training/camerax/take-photo and https://developer.android.com/training/camerax/analyze#java
-    private void bindPreviewAndImageCapture(@NonNull ProcessCameraProvider cameraProvider){
+    private void startPreviewCaptureAndAnalysis(@NonNull ProcessCameraProvider cameraProvider){
         CameraSelector cameraSelector = new CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK).build();
 
         preview = new Preview.Builder().build();
