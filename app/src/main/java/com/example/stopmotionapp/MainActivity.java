@@ -9,6 +9,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
+import android.util.Size;
 import android.view.View;
 import android.widget.Toast;
 
@@ -19,6 +20,7 @@ import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.Camera;
 import androidx.camera.core.CameraSelector;
+import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCaptureException;
 import androidx.camera.core.ImageProxy;
@@ -42,6 +44,7 @@ import java.util.concurrent.Executor;
 public class MainActivity extends AppCompatActivity {
     private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
     ImageCapture imageCapture;
+    ImageAnalysis imageAnalysis;
     Preview preview;
     int imageCount;
 
@@ -57,10 +60,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    //checks the permissions for camera and then sets up the camera if the permission is granted
+    ////source: https://developer.android.com/training/camerax/preview#java
     private void setUpCamera(ActivityResultLauncher<String> requestPermissionLauncher) {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED){
-            //following code very closely based on https://developer.android.com/training/camerax/preview#java
             cameraProviderFuture = ProcessCameraProvider.getInstance(this);
             cameraProviderFuture.addListener(() -> {
                 try {
@@ -77,23 +79,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    //following code based on code from https://developer.android.com/training/camerax/preview#java
-    //binds the preview use case to the activity lifecycle
+    //sources: https://developer.android.com/training/camerax/preview#java, https://developer.android.com/training/camerax/take-photo and https://developer.android.com/training/camerax/analyze#java
     private void bindPreviewAndImageCapture(@NonNull ProcessCameraProvider cameraProvider){
-        preview = new Preview.Builder().build();
-
         CameraSelector cameraSelector = new CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK).build();
 
+        preview = new Preview.Builder().build();
         PreviewView previewView = (PreviewView) findViewById(R.id.previewView);
         preview.setSurfaceProvider(previewView.getSurfaceProvider());
 
         imageCapture = new ImageCapture.Builder().build();
         Camera camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture);
+
+        imageAnalysis = new ImageAnalysis.Builder().setTargetResolution(new Size(4032, 3024)).setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build();
+        imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(this), new ImageAnalyzer());
+        cameraProvider.bindToLifecycle(this, cameraSelector, imageAnalysis, preview);
     }
 
 
-    //following code based on code from https://developer.android.com/training/camerax/take-photo and https://developer.android.com/codelabs/camerax-getting-started#4
-    //method to take photo when the 'Take Photo' button is clicked
+    //sources: https://developer.android.com/training/camerax/take-photo and https://developer.android.com/codelabs/camerax-getting-started#4
     @RequiresApi(api = Build.VERSION_CODES.R)
     public void takePhoto(View view){
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss", Locale.UK);
