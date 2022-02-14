@@ -10,13 +10,13 @@ import android.util.Log;
 import android.util.Size;
 import android.view.View;
 import android.widget.Toast;
+import android.widget.ToggleButton;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.camera.core.Camera;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.ImageCapture;
@@ -34,19 +34,19 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 
+
 public class MainActivity extends AppCompatActivity {
     private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
     ImageCapture imageCapture;
     ImageAnalysis imageAnalysis;
+    ImageAnalyzer imageAnalyzer;
     Preview preview;
-    int imageCount;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        imageCount = 0;
 
         ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {});
         setUpCamera(requestPermissionLauncher);
@@ -60,7 +60,9 @@ public class MainActivity extends AppCompatActivity {
             cameraProviderFuture.addListener(() -> {
                 try {
                     ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
-                    startPreviewCaptureAndAnalysis(cameraProvider);
+                    CameraSelector cameraSelector = new CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK).build();
+                    startPreviewCaptureAndAnalysis(cameraProvider, cameraSelector);
+                    setUpAutomaticModeToggle(cameraProvider, cameraSelector);
                 } catch (ExecutionException | InterruptedException e) {
                     //this should never be reached
                 }
@@ -73,19 +75,36 @@ public class MainActivity extends AppCompatActivity {
 
 
     //sources: https://developer.android.com/training/camerax/preview#java, https://developer.android.com/training/camerax/take-photo and https://developer.android.com/training/camerax/analyze#java
-    private void startPreviewCaptureAndAnalysis(@NonNull ProcessCameraProvider cameraProvider){
-        CameraSelector cameraSelector = new CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK).build();
-
+    private void startPreviewCaptureAndAnalysis(@NonNull ProcessCameraProvider cameraProvider, CameraSelector cameraSelector){
         preview = new Preview.Builder().build();
-        PreviewView previewView = (PreviewView) findViewById(R.id.previewView);
+        PreviewView previewView = findViewById(R.id.previewView);
         preview.setSurfaceProvider(previewView.getSurfaceProvider());
 
         imageCapture = new ImageCapture.Builder().build();
-        Camera camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture);
+        cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture);
 
+        imageAnalyzer = new ImageAnalyzer();
         imageAnalysis = new ImageAnalysis.Builder().setTargetResolution(new Size(4032, 3024)).setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build();
-        imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(this), new ImageAnalyzer());
+        imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(this), imageAnalyzer);
+    }
+
+
+    private void bindAnalyzer(@NonNull ProcessCameraProvider cameraProvider, CameraSelector cameraSelector) {
         cameraProvider.bindToLifecycle(this, cameraSelector, imageAnalysis, preview);
+    }
+
+
+    //source: https://developer.android.com/guide/topics/ui/controls/togglebutton
+    private void setUpAutomaticModeToggle(@NonNull ProcessCameraProvider cameraProvider, CameraSelector cameraSelector){
+        ToggleButton automaticModeToggle = (ToggleButton) findViewById(R.id.captureModeToggle);
+        automaticModeToggle.setOnCheckedChangeListener(((buttonView, isChecked) -> {
+            Log.d("ModeChanged", "Automatic capture mode set to " + isChecked);
+            if (isChecked){
+                bindAnalyzer(cameraProvider, cameraSelector);
+            }else{
+                cameraProvider.unbind(imageAnalysis);
+            }
+        }));
     }
 
 
@@ -97,8 +116,8 @@ public class MainActivity extends AppCompatActivity {
         ImageCapture.OutputFileOptions outputFileOptions = new ImageCapture.OutputFileOptions.Builder(photoFile).build();
 
         imageCapture.takePicture(outputFileOptions, ContextCompat.getMainExecutor(this), new ImageCapture.OnImageSavedCallback() {
-            public void onError(ImageCaptureException e){
-                Log.e("TakePhotoFail", "The photo did not save due to " + e.toString());
+            public void onError(@NonNull ImageCaptureException e){
+                Log.e("TakePhotoFail", "The photo did not save due to " + e);
             }
 
             public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults){
@@ -109,16 +128,4 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-
-    /*public void createVideo(View view){
-        //encodeVideo();
-        Intent intent = new Intent(this, VideoActivity.class);
-        startActivity(intent);
-    }
-
-    private void encodeVideo(){
-        VideoEncoder videoEncoder = new VideoEncoder(3840, 2160, 5);
-        videoEncoder.setUp();
-        videoEncoder.releaseEncoder();
-    };*///
 }
