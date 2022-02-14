@@ -41,12 +41,14 @@ public class MainActivity extends AppCompatActivity {
     ImageAnalysis imageAnalysis;
     ImageAnalyzer imageAnalyzer;
     Preview preview;
+    boolean automaticCaptureModeOn;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        automaticCaptureModeOn = false;
 
         ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {});
         setUpCamera(requestPermissionLauncher);
@@ -61,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
                     CameraSelector cameraSelector = new CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK).build();
-                    startPreviewCaptureAndAnalysis(cameraProvider, cameraSelector);
+                    setUpPreviewCaptureAndAnalysis(cameraProvider, cameraSelector);
                     setUpAutomaticModeToggle(cameraProvider, cameraSelector);
                 } catch (ExecutionException | InterruptedException e) {
                     //this should never be reached
@@ -75,7 +77,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     //sources: https://developer.android.com/training/camerax/preview#java, https://developer.android.com/training/camerax/take-photo and https://developer.android.com/training/camerax/analyze#java
-    private void startPreviewCaptureAndAnalysis(@NonNull ProcessCameraProvider cameraProvider, CameraSelector cameraSelector){
+    private void setUpPreviewCaptureAndAnalysis(@NonNull ProcessCameraProvider cameraProvider, CameraSelector cameraSelector){
         preview = new Preview.Builder().build();
         PreviewView previewView = findViewById(R.id.previewView);
         preview.setSurfaceProvider(previewView.getSurfaceProvider());
@@ -86,6 +88,9 @@ public class MainActivity extends AppCompatActivity {
         imageAnalyzer = new ImageAnalyzer();
         imageAnalysis = new ImageAnalysis.Builder().setTargetResolution(new Size(4032, 3024)).setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build();
         imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(this), imageAnalyzer);
+        if (automaticCaptureModeOn){
+            bindAnalyzer(cameraProvider, cameraSelector);
+        }
     }
 
 
@@ -97,12 +102,19 @@ public class MainActivity extends AppCompatActivity {
     //source: https://developer.android.com/guide/topics/ui/controls/togglebutton
     private void setUpAutomaticModeToggle(@NonNull ProcessCameraProvider cameraProvider, CameraSelector cameraSelector){
         ToggleButton automaticModeToggle = (ToggleButton) findViewById(R.id.captureModeToggle);
+        automaticModeToggle.setChecked(automaticCaptureModeOn);
+
         automaticModeToggle.setOnCheckedChangeListener(((buttonView, isChecked) -> {
             Log.d("ModeChanged", "Automatic capture mode set to " + isChecked);
+            automaticCaptureModeOn = isChecked;
             if (isChecked){
                 bindAnalyzer(cameraProvider, cameraSelector);
+                String msg = "Automatic capture mode turned on";
+                Toast.makeText(getBaseContext(), msg, Toast.LENGTH_SHORT).show();
             }else{
                 cameraProvider.unbind(imageAnalysis);
+                String msg = "Automatic capture mode turned off";
+                Toast.makeText(getBaseContext(), msg, Toast.LENGTH_SHORT).show();
             }
         }));
     }
