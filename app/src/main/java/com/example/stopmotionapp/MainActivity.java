@@ -2,12 +2,14 @@ package com.example.stopmotionapp;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.media.AudioAttributes;
+import android.media.AudioManager;
+import android.media.SoundPool;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
-import android.util.Size;
 import android.view.View;
 import android.widget.Toast;
 import android.widget.ToggleButton;
@@ -37,12 +39,18 @@ import java.util.concurrent.ExecutionException;
 
 
 public class MainActivity extends AppCompatActivity {
+    public static final int MAX_STREAMS = 1;
+
     private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
-    ImageCapture imageCapture;
-    ImageAnalysis imageAnalysis;
-    ImageAnalyzer imageAnalyzer;
-    Preview preview;
-    boolean automaticCaptureModeOn;
+    private ImageCapture imageCapture;
+    private ImageAnalysis imageAnalysis;
+    private Preview preview;
+    private boolean automaticCaptureModeOn;
+
+    private SoundPool soundPool;
+    private float volume;
+    private int cameraSoundId;
+    private boolean soundPoolLoaded;
 
 
     @Override
@@ -52,7 +60,34 @@ public class MainActivity extends AppCompatActivity {
         automaticCaptureModeOn = false;
 
         ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {});
+        setUpCameraSound();
         setUpCamera(requestPermissionLauncher);
+    }
+
+
+    //source: https://o7planning.org/10523/android-soundpool
+    private void setUpCameraSound(){
+        int streamType = AudioManager.STREAM_MUSIC;
+        AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+
+        float currentVolumeIndex = (float) audioManager.getStreamVolume(streamType);
+        float maxVolumeIndex = (float) audioManager.getStreamMaxVolume(streamType);
+        volume = currentVolumeIndex/maxVolumeIndex;
+        setVolumeControlStream(streamType);
+
+        AudioAttributes audioAttributes = new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build();
+        SoundPool.Builder builder = new SoundPool.Builder();
+        builder.setAudioAttributes(audioAttributes).setMaxStreams(MAX_STREAMS);
+
+        soundPool = builder.build();
+        soundPool.setOnLoadCompleteListener(new SoundPool.OnLoadCompleteListener() {
+            @Override
+            public void onLoadComplete(SoundPool soundPool, int i, int i1) {
+                soundPoolLoaded = true;
+            }
+        });
+
+        cameraSoundId = soundPool.load(this, R.raw.camera_shutter,1);
     }
 
 
@@ -86,7 +121,7 @@ public class MainActivity extends AppCompatActivity {
         imageCapture = new ImageCapture.Builder().build();
         cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture);
 
-        imageAnalyzer = new ImageAnalyzer();
+        ImageAnalyzer imageAnalyzer = new ImageAnalyzer();
         imageAnalysis = new ImageAnalysis.Builder().setTargetAspectRatio(AspectRatio.RATIO_4_3).setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build();
         imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(this), imageAnalyzer);
         if (automaticCaptureModeOn){
@@ -128,6 +163,8 @@ public class MainActivity extends AppCompatActivity {
         File photoFile = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES), dateFormat.format(new Date()) + ".jpg");
         ImageCapture.OutputFileOptions outputFileOptions = new ImageCapture.OutputFileOptions.Builder(photoFile).build();
 
+        playCameraSound();
+
         imageCapture.takePicture(outputFileOptions, ContextCompat.getMainExecutor(this), new ImageCapture.OnImageSavedCallback() {
             public void onError(@NonNull ImageCaptureException e){
                 Log.e("TakePhotoFail", "The photo did not save due to " + e);
@@ -140,5 +177,16 @@ public class MainActivity extends AppCompatActivity {
                 Log.d("ImageSaved", msg);
             }
         });
+    }
+
+
+    //source: https://o7planning.org/10523/android-soundpool
+    private void playCameraSound() {
+        Log.d("PlaySound", "Sound should have been made. Volume = " + volume + " soundPoolLoaded = " + soundPoolLoaded);
+        if (soundPoolLoaded){
+            float leftVolume = volume;
+            float rightVolume = volume;
+            int streamID = soundPool.play(cameraSoundId, leftVolume, rightVolume, 1, 0, 1f);
+        }
     }
 }

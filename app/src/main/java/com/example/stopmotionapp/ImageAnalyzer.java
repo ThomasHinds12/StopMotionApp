@@ -34,7 +34,7 @@ public class ImageAnalyzer implements  ImageAnalysis.Analyzer{
             InputImage inputImage = InputImage.fromMediaImage(image, imageProxy.getImageInfo().getRotationDegrees());
 
             detector.process(inputImage).addOnSuccessListener(
-                    (detectedObjects) -> Log.d("DetectedObjects", "List size: " + detectedObjects.size())
+                    (detectedObjects) -> Log.d("DetectedObjects", String.valueOf(detectedObjects.size()))
                 ).addOnFailureListener(
                         e -> Log.e("Detection failed", e.toString())
                 ).addOnCompleteListener(
