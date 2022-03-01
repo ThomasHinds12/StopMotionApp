@@ -4,4 +4,5 @@
     <string name="createVideo">Create\nVideo</string>
     <string name="photoButton">Take\nPhoto</string>
     <string name="resetButton">Reset</string>
+    <string name="togglebutton">ToggleButton</string>
 </resources>

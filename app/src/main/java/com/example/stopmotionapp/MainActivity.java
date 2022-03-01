@@ -2,21 +2,24 @@ package com.example.stopmotionapp;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.media.AudioAttributes;
+import android.media.AudioManager;
+import android.media.SoundPool;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
-import android.util.Size;
 import android.view.View;
 import android.widget.Toast;
+import android.widget.ToggleButton;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.camera.core.Camera;
+import androidx.camera.core.AspectRatio;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.ImageCapture;
@@ -34,33 +37,66 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 
+
 public class MainActivity extends AppCompatActivity {
+    public static final int MAX_STREAMS = 1;
+
     private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
-    ImageCapture imageCapture;
-    ImageAnalysis imageAnalysis;
-    Preview preview;
-    int imageCount;
+    private ImageCapture imageCapture;
+    private ImageAnalysis imageAnalysis;
+    private Preview preview;
+    private boolean automaticCaptureModeOn;
+
+    private SoundPool soundPool;
+    private float volume;
+    private int cameraSoundId;
+    private boolean soundPoolLoaded;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        imageCount = 0;
+        automaticCaptureModeOn = false;
 
-        ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {});
+        ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+        });
+        setUpCameraSound();
         setUpCamera(requestPermissionLauncher);
+    }
+
+
+    //source: https://o7planning.org/10523/android-soundpool
+    private void setUpCameraSound() {
+        int streamType = AudioManager.STREAM_MUSIC;
+        AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+
+        float currentVolumeIndex = (float) audioManager.getStreamVolume(streamType);
+        float maxVolumeIndex = (float) audioManager.getStreamMaxVolume(streamType);
+        volume = currentVolumeIndex / maxVolumeIndex;
+        setVolumeControlStream(streamType);
+
+        AudioAttributes audioAttributes = new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build();
+        SoundPool.Builder builder = new SoundPool.Builder();
+        builder.setAudioAttributes(audioAttributes).setMaxStreams(MAX_STREAMS);
+
+        soundPool = builder.build();
+        soundPool.setOnLoadCompleteListener((soundPool, i, i1) -> soundPoolLoaded = true);
+
+        cameraSoundId = soundPool.load(this, R.raw.camera_shutter, 1);
     }
 
 
     ////source: https://developer.android.com/training/camerax/preview#java
     private void setUpCamera(ActivityResultLauncher<String> requestPermissionLauncher) {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED){
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
             cameraProviderFuture = ProcessCameraProvider.getInstance(this);
             cameraProviderFuture.addListener(() -> {
                 try {
                     ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
-                    startPreviewCaptureAndAnalysis(cameraProvider);
+                    CameraSelector cameraSelector = new CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK).build();
+                    setUpPreviewCaptureAndAnalysis(cameraProvider, cameraSelector);
+                    setUpAutomaticModeToggle(cameraProvider, cameraSelector);
                 } catch (ExecutionException | InterruptedException e) {
                     //this should never be reached
                 }
@@ -73,35 +109,64 @@ public class MainActivity extends AppCompatActivity {
 
 
     //sources: https://developer.android.com/training/camerax/preview#java, https://developer.android.com/training/camerax/take-photo and https://developer.android.com/training/camerax/analyze#java
-    private void startPreviewCaptureAndAnalysis(@NonNull ProcessCameraProvider cameraProvider){
-        CameraSelector cameraSelector = new CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK).build();
-
+    private void setUpPreviewCaptureAndAnalysis(@NonNull ProcessCameraProvider cameraProvider, CameraSelector cameraSelector) {
         preview = new Preview.Builder().build();
-        PreviewView previewView = (PreviewView) findViewById(R.id.previewView);
+        PreviewView previewView = findViewById(R.id.previewView);
         preview.setSurfaceProvider(previewView.getSurfaceProvider());
 
         imageCapture = new ImageCapture.Builder().build();
-        Camera camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture);
+        cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture);
 
-        imageAnalysis = new ImageAnalysis.Builder().setTargetResolution(new Size(4032, 3024)).setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build();
-        imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(this), new ImageAnalyzer());
+        ImageAnalyzer imageAnalyzer = new ImageAnalyzer(this);
+        imageAnalysis = new ImageAnalysis.Builder().setTargetAspectRatio(AspectRatio.RATIO_4_3).setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build();
+        imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(this), imageAnalyzer);
+        if (automaticCaptureModeOn) {
+            bindAnalyzer(cameraProvider, cameraSelector);
+        }
+    }
+
+
+    private void bindAnalyzer(@NonNull ProcessCameraProvider cameraProvider, CameraSelector cameraSelector) {
         cameraProvider.bindToLifecycle(this, cameraSelector, imageAnalysis, preview);
+    }
+
+
+    //source: https://developer.android.com/guide/topics/ui/controls/togglebutton
+    private void setUpAutomaticModeToggle(@NonNull ProcessCameraProvider cameraProvider, CameraSelector cameraSelector) {
+        ToggleButton automaticModeToggle = (ToggleButton) findViewById(R.id.captureModeToggle);
+        automaticModeToggle.setChecked(automaticCaptureModeOn);
+
+        automaticModeToggle.setOnCheckedChangeListener(((buttonView, isChecked) -> {
+            Log.d("ModeChanged", "Automatic capture mode set to " + isChecked);
+            automaticCaptureModeOn = isChecked;
+            if (isChecked) {
+                bindAnalyzer(cameraProvider, cameraSelector);
+                String msg = "Automatic capture mode turned on";
+                Toast.makeText(getBaseContext(), msg, Toast.LENGTH_SHORT).show();
+            } else {
+                cameraProvider.unbind(imageAnalysis);
+                String msg = "Automatic capture mode turned off";
+                Toast.makeText(getBaseContext(), msg, Toast.LENGTH_SHORT).show();
+            }
+        }));
     }
 
 
     //sources: https://developer.android.com/training/camerax/take-photo and https://developer.android.com/codelabs/camerax-getting-started#4
     @RequiresApi(api = Build.VERSION_CODES.R)
-    public void takePhoto(View view){
+    public void takePhoto() {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss", Locale.UK);
         File photoFile = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES), dateFormat.format(new Date()) + ".jpg");
         ImageCapture.OutputFileOptions outputFileOptions = new ImageCapture.OutputFileOptions.Builder(photoFile).build();
 
+        playCameraSound();
+
         imageCapture.takePicture(outputFileOptions, ContextCompat.getMainExecutor(this), new ImageCapture.OnImageSavedCallback() {
-            public void onError(ImageCaptureException e){
-                Log.e("TakePhotoFail", "The photo did not save due to " + e.toString());
+            public void onError(@NonNull ImageCaptureException e) {
+                Log.e("TakePhotoFail", "The photo did not save due to " + e);
             }
 
-            public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults){
+            public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
                 Uri savedUri = Uri.fromFile(photoFile);
                 String msg = "Photo capture succeeded:" + savedUri;
                 Toast.makeText(getBaseContext(), msg, Toast.LENGTH_SHORT).show();
@@ -110,15 +175,20 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    /*public void createVideo(View view){
-        //encodeVideo();
-        Intent intent = new Intent(this, VideoActivity.class);
-        startActivity(intent);
+
+    @RequiresApi(api = Build.VERSION_CODES.R)
+    public void takePhotoButton(View view){
+        takePhoto();
     }
 
-    private void encodeVideo(){
-        VideoEncoder videoEncoder = new VideoEncoder(3840, 2160, 5);
-        videoEncoder.setUp();
-        videoEncoder.releaseEncoder();
-    };*///
+
+    //source: https://o7planning.org/10523/android-soundpool
+    private void playCameraSound() {
+        Log.d("PlaySound", "Sound should have been made. Volume = " + volume + " soundPoolLoaded = " + soundPoolLoaded);
+        if (soundPoolLoaded) {
+            float leftVolume = volume;
+            float rightVolume = volume;
+            soundPool.play(cameraSoundId, leftVolume, rightVolume, 1, 0, 1f);
+        }
+    }
 }
