@@ -4,5 +4,7 @@
     <string name="createVideo">Create\nVideo</string>
     <string name="photoButton">Take\nPhoto</string>
     <string name="resetButton">Reset</string>
-    <string name="togglebutton">ToggleButton</string>
+    <string name="toggleButton">ToggleButton</string>
+    <string name="automatic_capture_mode">Automatic Capture Mode</string>
+    <string name="deleteButton">DELETE\nLAST\nPHOTO</string>
 </resources>
