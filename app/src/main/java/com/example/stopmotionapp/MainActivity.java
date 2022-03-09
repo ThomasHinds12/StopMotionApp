@@ -47,6 +47,8 @@ public class MainActivity extends AppCompatActivity {
     private Preview preview;
     private boolean automaticCaptureModeOn;
 
+    File lastPhoto;
+
     private SoundPool soundPool;
     private float volume;
     private int cameraSoundId;
@@ -58,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         automaticCaptureModeOn = false;
+        lastPhoto = null;
 
         ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
         });
@@ -168,6 +171,7 @@ public class MainActivity extends AppCompatActivity {
 
             public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
                 Uri savedUri = Uri.fromFile(photoFile);
+                lastPhoto = photoFile;
                 String msg = "Photo capture succeeded:" + savedUri;
                 Toast.makeText(getBaseContext(), msg, Toast.LENGTH_SHORT).show();
                 Log.d("ImageSaved", msg);
@@ -189,6 +193,31 @@ public class MainActivity extends AppCompatActivity {
             float leftVolume = volume;
             float rightVolume = volume;
             soundPool.play(cameraSoundId, leftVolume, rightVolume, 1, 0, 1f);
+        }
+    }
+
+
+    public void deleteLastPhoto(View view){
+        if (lastPhoto != null){
+
+            if (lastPhoto.exists()){
+                boolean deleted = lastPhoto.delete();
+
+                if (deleted){
+                    Log.d("ImageDeletion", "File " + lastPhoto + " has been deleted");
+                    String msg = "Last photo deleted successfully";
+                    Toast.makeText(getBaseContext(), msg, Toast.LENGTH_SHORT).show();
+                }else{
+                    Log.d("ImageDeletion", "Failed to delete image " + lastPhoto);
+                    String msg = "Failed to delete last image";
+                    Toast.makeText(getBaseContext(), msg, Toast.LENGTH_SHORT).show();
+                }
+            }else{
+                Log.d("ImageDeletion", "File does not exist");
+            }
+        }else{
+            String msg = "No image to delete";
+            Toast.makeText(getBaseContext(), msg, Toast.LENGTH_SHORT).show();
         }
     }
 }
