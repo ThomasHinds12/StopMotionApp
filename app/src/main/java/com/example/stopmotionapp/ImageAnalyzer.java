@@ -19,16 +19,20 @@ import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions;
 import java.util.LinkedList;
 import java.util.List;
 
+    /*
+    https://developers.google.com/ml-kit/vision/object-detection/android#java and
+    https://developer.android.com/training/camerax/analyze#java
+    Used as sources */
 
-/*https://developers.google.com/ml-kit/vision/object-detection/android#java and https://developer.android.com/training/camerax/analyze#java
-Used as sources*/
 public class ImageAnalyzer implements ImageAnalysis.Analyzer {
-    MainActivity mainActivity;
+    public static final int LIST_SIZE = 15; // Used to define length of numOfObjectsHistory, higher value means more accuracy but slower response time
 
-    public static final int LIST_SIZE = 15;
+    private final MainActivity mainActivity; // Allows the takePhoto() method in MainActivity to be used
+
+    // Variables used for object detection and hand tracking
     ObjectDetector detector;
     LinkedList<Integer> numOfObjectsHistory;
-    boolean handsInFrame;
+    private boolean handsInFrame;
 
 
     public ImageAnalyzer(MainActivity mainActivity) {
@@ -61,6 +65,8 @@ public class ImageAnalyzer implements ImageAnalysis.Analyzer {
     }
 
 
+    // Uses the list of objects returned by detector to track user's hands
+    // Calls MainActivity.takePhoto() to capture image when hands removed from frame
     @RequiresApi(api = Build.VERSION_CODES.R)
     private void lookForHands(List<DetectedObject> detectedObjects) {
         int numOfObjects = detectedObjects.size();
@@ -70,28 +76,26 @@ public class ImageAnalyzer implements ImageAnalysis.Analyzer {
             numOfObjectsHistory.removeLast();
         }
 
-        if (numOfObjectsHistory.size() == LIST_SIZE){
-            if (!handsInFrame){
+        if (numOfObjectsHistory.size() == LIST_SIZE) {
+            if (!handsInFrame) {
                 //check if values in obj list are changing, if they are then the hands are in frame so set to true
-                for (Integer i : numOfObjectsHistory){
-                    if ((i <= numOfObjects-2 || i >= numOfObjects + 2) && i != 0){
+                for (Integer i : numOfObjectsHistory) {
+                    if ((i <= numOfObjects - 2 || i >= numOfObjects + 2) && i != 0) {
                         handsInFrame = true;
-                        Log.d("HandsInFrame", " true, ObjectHistory: " + numOfObjectsHistory);
                         break;
                     }
                 }
-            }else{
+            } else {
                 //check if values stabilize, if they do then set to false and capture image
                 boolean unchanged = true;
-                for (Integer i : numOfObjectsHistory){
-                    if (!i.equals(numOfObjects)){
+                for (Integer i : numOfObjectsHistory) {
+                    if (!i.equals(numOfObjects)) {
                         unchanged = false;
                         break;
                     }
                 }
-                if (unchanged){
+                if (unchanged) {
                     handsInFrame = false;
-                    Log.d("HandsInFrame", " false, ObjectHistory: " + numOfObjectsHistory);
                     mainActivity.takePhoto();
                 }
             }

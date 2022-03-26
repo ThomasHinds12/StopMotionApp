@@ -39,22 +39,26 @@ import java.util.concurrent.ExecutionException;
 
 
 public class MainActivity extends AppCompatActivity {
-    public static final int MAX_STREAMS = 1;
+    public static final int MAX_STREAMS = 1; // Constant used to build soundPool
 
+    // Variables used to access the camera and for the CameraX use cases
     private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
     private ImageCapture imageCapture;
     private ImageAnalysis imageAnalysis;
     private Preview preview;
-    private boolean automaticCaptureModeOn;
 
-    File lastPhoto;
+    private boolean automaticCaptureModeOn; // Used to facilitate the toggle of automatic capture mode
 
+    private File lastPhoto; // Address of the last file taken by the camera
+
+    // Variables used to create the camera shutter sound effect
     private SoundPool soundPool;
     private float volume;
     private int cameraSoundId;
     private boolean soundPoolLoaded;
 
 
+    // Called when MainActivity is created, effectively used as a constructor and calls methods to set up camera and sound effect
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -69,7 +73,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    //source: https://o7planning.org/10523/android-soundpool
+    // Loads the camera sound to soundPool so that sound can be played
+    // source: https://o7planning.org/10523/android-soundpool
     private void setUpCameraSound() {
         int streamType = AudioManager.STREAM_MUSIC;
         AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
@@ -90,7 +95,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    ////source: https://developer.android.com/training/camerax/preview#java
+    // Handles camera permissions, accesses camera, calls methods to set up CameraX use cases and automatic capture mode toggle
+    // source: https://developer.android.com/training/camerax/preview#java
     private void setUpCamera(ActivityResultLauncher<String> requestPermissionLauncher) {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
             cameraProviderFuture = ProcessCameraProvider.getInstance(this);
@@ -110,8 +116,8 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
-    //sources: https://developer.android.com/training/camerax/preview#java, https://developer.android.com/training/camerax/take-photo and https://developer.android.com/training/camerax/analyze#java
+    // Sets up and binds the CameraX uses case objects to application lifecycle
+    // sources: https://developer.android.com/training/camerax/preview#java, https://developer.android.com/training/camerax/take-photo and https://developer.android.com/training/camerax/analyze#java
     private void setUpPreviewCaptureAndAnalysis(@NonNull ProcessCameraProvider cameraProvider, CameraSelector cameraSelector) {
         preview = new Preview.Builder().build();
         PreviewView previewView = findViewById(R.id.previewView);
@@ -129,18 +135,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+    // Binds the image analyzer to the application lifecycle
     private void bindAnalyzer(@NonNull ProcessCameraProvider cameraProvider, CameraSelector cameraSelector) {
         cameraProvider.bindToLifecycle(this, cameraSelector, imageAnalysis, preview);
     }
 
 
-    //source: https://developer.android.com/guide/topics/ui/controls/togglebutton
+    // Sets up toggle button for the automatic capture, binds when checked, unbinds when unchecked
+    // source: https://developer.android.com/guide/topics/ui/controls/togglebutton
     private void setUpAutomaticModeToggle(@NonNull ProcessCameraProvider cameraProvider, CameraSelector cameraSelector) {
         ToggleButton automaticModeToggle = (ToggleButton) findViewById(R.id.captureModeToggle);
         automaticModeToggle.setChecked(automaticCaptureModeOn);
 
         automaticModeToggle.setOnCheckedChangeListener(((buttonView, isChecked) -> {
-            Log.d("ModeChanged", "Automatic capture mode set to " + isChecked);
             automaticCaptureModeOn = isChecked;
             if (isChecked) {
                 bindAnalyzer(cameraProvider, cameraSelector);
@@ -155,7 +162,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    //sources: https://developer.android.com/training/camerax/take-photo and https://developer.android.com/codelabs/camerax-getting-started#4
+    // Captures and saves an image to external storage, used by takePhotoButton() and the ImageAnalyzer object
+    // sources: https://developer.android.com/training/camerax/take-photo and https://developer.android.com/codelabs/camerax-getting-started#4
     @RequiresApi(api = Build.VERSION_CODES.R)
     public void takePhoto() {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss", Locale.UK);
@@ -166,7 +174,8 @@ public class MainActivity extends AppCompatActivity {
 
         imageCapture.takePicture(outputFileOptions, ContextCompat.getMainExecutor(this), new ImageCapture.OnImageSavedCallback() {
             public void onError(@NonNull ImageCaptureException e) {
-                Log.e("TakePhotoFail", "The photo did not save due to " + e);
+                String msg = "Failed to save photo";
+                Toast.makeText(getBaseContext(), msg, Toast.LENGTH_SHORT).show();
             }
 
             public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
@@ -174,21 +183,22 @@ public class MainActivity extends AppCompatActivity {
                 lastPhoto = photoFile;
                 String msg = "Photo capture succeeded:" + savedUri;
                 Toast.makeText(getBaseContext(), msg, Toast.LENGTH_SHORT).show();
-                Log.d("ImageSaved", msg);
+                Log.d("Image", String.valueOf(savedUri));
             }
         });
     }
 
 
+    // Called when the take photo button is pressed, means takePhoto() can be used without passing a View object
     @RequiresApi(api = Build.VERSION_CODES.R)
-    public void takePhotoButton(View view){
+    public void takePhotoButton(View view) {
         takePhoto();
     }
 
 
-    //source: https://o7planning.org/10523/android-soundpool
+    // Uses soundPool to play camera shutter sound effect out load, called when an image is captured
+    // source: https://o7planning.org/10523/android-soundpool
     private void playCameraSound() {
-        Log.d("PlaySound", "Sound should have been made. Volume = " + volume + " soundPoolLoaded = " + soundPoolLoaded);
         if (soundPoolLoaded) {
             float leftVolume = volume;
             float rightVolume = volume;
@@ -197,27 +207,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    public void deleteLastPhoto(View view){
-        if (lastPhoto != null){
-
-            if (lastPhoto.exists()){
+    // Deletes the file stored in lastPhoto, called when the deleteLastButton is pressed
+    public void deleteLastPhoto(View view) {
+        if (lastPhoto != null) {
+            if (lastPhoto.exists()) {
                 boolean deleted = lastPhoto.delete();
-
-                if (deleted){
-                    Log.d("ImageDeletion", "File " + lastPhoto + " has been deleted");
-                    String msg = "Last photo deleted successfully";
-                    Toast.makeText(getBaseContext(), msg, Toast.LENGTH_SHORT).show();
-                }else{
-                    Log.d("ImageDeletion", "Failed to delete image " + lastPhoto);
-                    String msg = "Failed to delete last image";
-                    Toast.makeText(getBaseContext(), msg, Toast.LENGTH_SHORT).show();
+                String msg;
+                if (deleted) {
+                    msg = "Last photo deleted successfully";
+                } else {
+                    msg = "Failed to delete last image";
                 }
-            }else{
-                Log.d("ImageDeletion", "File does not exist");
+                Toast.makeText(getBaseContext(), msg, Toast.LENGTH_SHORT).show();
+            } else {
+                String msg = "No image to delete";
+                Toast.makeText(getBaseContext(), msg, Toast.LENGTH_SHORT).show();
             }
-        }else{
-            String msg = "No image to delete";
-            Toast.makeText(getBaseContext(), msg, Toast.LENGTH_SHORT).show();
         }
     }
 }
